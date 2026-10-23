@@ -1,0 +1,6 @@
+@ConflictMap.Api_HostAddress = http://localhost:5240
+
+GET {{ConflictMap.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

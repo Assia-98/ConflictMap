@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="ConflictMap.Api/ConflictMap.Api.csproj" />
+  <Project Path="ConflictMap.Contracts/ConflictMap.Contracts.csproj" />
+  <Project Path="ConflictMap.Infrastructure/ConflictMap.Infrastructure.csproj" />
+  <Project Path="ConflictMap.Tests/ConflictMap.Tests.csproj" />
+  <Project Path="ConflictMap.Web/ConflictMap.Web.csproj" />
+</Solution>
