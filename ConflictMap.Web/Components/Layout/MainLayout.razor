@@ -1,23 +1,30 @@
 ﻿@inherits LayoutComponentBase
 
-<div class="page">
-    <div class="sidebar">
-        <NavMenu />
-    </div>
+<a class="skip-link" href="#main">Hoppa till innehållet</a>
 
-    <main>
-        <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
-        </div>
+<div class="app">
+    <header class="app-header">
+        <a class="brand" href="">
+            <span class="brand-mark" aria-hidden="true"></span>
+            <span>Konfliktkartan</span>
+        </a>
+        <p class="tagline">Väpnade konflikter i världen, med data från UCDP</p>
+    </header>
 
-        <article class="content px-4">
-            @Body
-        </article>
+    <main id="main" class="app-main">
+        @Body
     </main>
+
+    <footer class="app-footer">
+        <p>
+            Data: <a href="https://ucdp.uu.se" target="_blank" rel="noopener">Uppsala Conflict Data Program (UCDP)</a>.
+            AI:n hämtar alla siffror från databasen.
+        </p>
+    </footer>
 </div>
 
 <div id="blazor-error-ui" data-nosnippet>
-    An unhandled error has occurred.
-    <a href="." class="reload">Reload</a>
-    <span class="dismiss">🗙</span>
+    Något gick fel.
+    <a href="." class="reload">Ladda om</a>
+    <span class="dismiss">✕</span>
 </div>

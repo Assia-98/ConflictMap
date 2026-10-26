@@ -1,7 +1,28 @@
 ﻿@page "/"
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Konfliktkartan</PageTitle>
 
-<h1>Hello, world!</h1>
+<h1 class="visually-hidden">Konfliktkartan</h1>
 
-Welcome to your new app.
+<div class="home-grid">
+    <section class="card area-filters placeholder" aria-label="Filter">
+        <span class="placeholder-label">FilterBar</span>
+        <p>År, region och typ av konflikt</p>
+    </section>
+
+    <section class="card area-map placeholder" aria-label="Karta">
+        <span class="placeholder-label">WorldMap</span>
+        <p>Världskarta där länderna färgas efter konfliktdata</p>
+    </section>
+
+    <section class="card area-list placeholder" aria-label="Konfliktlista">
+        <span class="placeholder-label">ConflictList</span>
+        <p>Resultatlistan med sidor</p>
+        <p><a href="conflicts/1">Exempel: öppna en konflikt</a></p>
+    </section>
+
+    <aside class="card area-chat placeholder" aria-label="Chatt">
+        <span class="placeholder-label">ChatPanel</span>
+        <p>Fråga AI:n på svenska. Länderna i svaret markeras på kartan.</p>
+    </aside>
+</div>
