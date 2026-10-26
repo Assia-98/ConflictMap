@@ -1,0 +1,23 @@
+﻿@page "/conflicts/{Id:int}"
+
+<PageTitle>Konflikt @Id – Konfliktkartan</PageTitle>
+
+<nav class="breadcrumb" aria-label="Brödsmulor">
+    <a href="">← Tillbaka till kartan</a>
+</nav>
+
+<div class="details-grid">
+    <section class="card placeholder">
+        <h1>Konflikt @Id</h1>
+        <p>Namn, parter, typ, region och länder (GET /api/conflicts/@Id)</p>
+    </section>
+
+    <section class="card placeholder">
+        <span class="placeholder-label">År för år</span>
+        <p>Intensitet och dödsfall per år</p>
+    </section>
+</div>
+
+@code {
+    [Parameter] public int Id { get; set; }
+}
