@@ -1,10 +1,17 @@
 using ConflictMap.Web.Components;
+using ConflictMap.Contracts;
+using ConflictMap.Web.Services;
+using ConflictMap.Web.State;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+builder.Services.AddScoped<IConflictApiClient, MockConflictApiClient>();
+builder.Services.AddScoped<MapState>();
 
 var app = builder.Build();
 
