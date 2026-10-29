@@ -16,16 +16,18 @@ public class UcdpApiSource(HttpClient httpClient) : IConflictDataSource
         string? url = $"ucdpprioconflict/{Version}?pagesize={PageSize}";
         var pagesFetched = 0;
 
-        // Keep fetching until there is no next page
-        while (url is not null && pagesFetched < MaxPages)
+        // Keep fetching until there is no next page (null or empty)
+        while (!string.IsNullOrWhiteSpace(url) && pagesFetched < MaxPages)
         {
+            Console.WriteLine($"Fetching: {url}");   // TEMPORARY: see which URL is called
+
             var response = await httpClient
                 .GetFromJsonAsync<UcdpPagedResponse<UcdpConflictRow>>(url, ct);
 
             if (response is null) break;
 
             allRows.AddRange(response.Result);   // add this page's rows
-            url = response.NextPageUrl;           // null on the last page
+            url = response.NextPageUrl;           // null or empty on the last page
             pagesFetched++;
         }
 
