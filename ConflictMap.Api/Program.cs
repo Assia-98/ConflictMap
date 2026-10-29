@@ -1,5 +1,6 @@
 using ConflictMap.Infrastructure.Data;
 using ConflictMap.Infrastructure.DataSources;
+using ConflictMap.Infrastructure.Import;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -22,6 +23,9 @@ builder.Services.AddHttpClient<IConflictDataSource, UcdpApiSource>(client =>
     client.DefaultRequestHeaders.Add("x-ucdp-access-token",
         builder.Configuration["Ucdp:ApiToken"]);
 });
+
+// Import service: turns UCDP rows into Conflict + ConflictYear
+builder.Services.AddScoped<ConflictImportService>();
 
 builder.Services.AddOpenApi();
 
@@ -47,6 +51,16 @@ app.MapGet("/test/conflicts", async (IConflictDataSource source, CancellationTok
 {
     var rows = await source.GetConflictRowsAsync(ct);
     return new { Count = rows.Count, First = rows.FirstOrDefault() };
+});
+
+// TEMPORARY: run the import and show how many rows ended up in the database
+app.MapGet("/test/import", async (ConflictImportService importer, AppDbContext db, CancellationToken ct) =>
+{
+    var imported = await importer.ImportAsync(ct);
+    var conflictsInDb = await db.Conflicts.CountAsync(ct);
+    var yearsInDb = await db.ConflictYears.CountAsync(ct);
+
+    return new { Imported = imported, ConflictsInDb = conflictsInDb, YearsInDb = yearsInDb };
 });
 
 app.Run();
