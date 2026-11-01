@@ -7,4 +7,6 @@ namespace ConflictMap.Infrastructure.DataSources;
 public interface IConflictDataSource
 {
     Task<List<UcdpConflictRow>> GetConflictRowsAsync(CancellationToken ct = default);
+    Task<List<UcdpDeathsRow>> GetBattleDeathsRowsAsync(CancellationToken ct = default);   // NEW
+
 }

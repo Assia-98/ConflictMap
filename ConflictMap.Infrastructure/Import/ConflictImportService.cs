@@ -73,13 +73,42 @@ public class ConflictImportService(IConflictDataSource source, AppDbContext db)
                     conflict.Countries.Add(country);
             }
         }
+
         // Countries that never had a single-country row get a name from the fallback list
         foreach (var country in countries.Values.Where(c => c.Name.StartsWith("GW ")))
             country.Name = GwIsoCodes.FallbackName(country.GwCode) ?? country.Name;
+
+        // NEW: battle deaths (BRD). Several dyads can share a conflict and year, so we sum them.
+        var deathRows = await source.GetBattleDeathsRowsAsync(ct);
+
+        var deathsPerConflictYear = deathRows
+            .GroupBy(d => (ConflictId: int.Parse(d.ConflictId), Year: int.Parse(d.Year)))
+            .ToDictionary(
+                g => g.Key,
+                g => (Best: g.Sum(d => ParseOrZero(d.BdBest)),
+                      Low: g.Sum(d => ParseOrZero(d.BdLow)),
+                      High: g.Sum(d => ParseOrZero(d.BdHigh))));
+
+        // NEW: put the deaths on the matching episode (conflict + year)
+        foreach (var conflict in conflicts.Values)
+        {
+            foreach (var conflictYear in conflict.Years)
+            {
+                if (deathsPerConflictYear.TryGetValue((conflict.ConflictId, conflictYear.Year), out var deaths))
+                {
+                    conflictYear.BattleDeathsBest = deaths.Best;
+                    conflictYear.BattleDeathsLow = deaths.Low;
+                    conflictYear.BattleDeathsHigh = deaths.High;
+                }
+            }
+        }
 
         db.Conflicts.AddRange(conflicts.Values);
         await db.SaveChangesAsync(ct);
 
         return conflicts.Count;
     }
-} 
+
+    // "27" -> 27, "" -> 0
+    private static int ParseOrZero(string value) => int.TryParse(value, out var n) ? n : 0;
+}
