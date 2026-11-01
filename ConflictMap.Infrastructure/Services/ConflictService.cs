@@ -45,8 +45,8 @@ public class ConflictService(AppDbContext db) : IConflictService
             .Select(cy => new ConflictSummaryDto(
                 cy.ConflictId,
                 cy.Conflict.Location,
-                cy.Conflict.SideA,
-                cy.Conflict.SideB,
+                cy.SideA,                 // CHANGED: the sides of this year
+                cy.SideB,                 // CHANGED
                 cy.Year,
                 cy.Conflict.Type,
                 cy.Intensity,
@@ -65,14 +65,18 @@ public class ConflictService(AppDbContext db) : IConflictService
 
         if (conflict is null) return null;
 
-        var years = conflict.Years
-            .OrderBy(y => y.Year)
+        var years = conflict.Years.OrderBy(y => y.Year).ToList();
+
+        // CHANGED: the detail page shows the sides from the most recent year
+        var latest = years.Last();
+
+        var yearDtos = years
             .Select(y => new ConflictYearDto(
                 y.Year, y.Intensity, y.BattleDeathsBest, y.BattleDeathsLow, y.BattleDeathsHigh))
             .ToList();
 
         return new ConflictDetailDto(
-            conflict.ConflictId, conflict.Location, conflict.SideA, conflict.SideB,
-            conflict.Type, conflict.Region, conflict.StartYear, years, Source);
+            conflict.ConflictId, conflict.Location, latest.SideA, latest.SideB,
+            conflict.Type, conflict.Region, conflict.StartYear, yearDtos, Source);
     }
 }

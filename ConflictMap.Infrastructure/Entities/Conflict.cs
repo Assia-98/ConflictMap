@@ -2,12 +2,11 @@
 
 namespace ConflictMap.Infrastructure.Entities;
 
+// The series: what stays the same for the whole conflict
 public class Conflict
 {
     public int ConflictId { get; set; }
     public string Location { get; set; } = string.Empty;
-    public string SideA { get; set; } = string.Empty;
-    public string SideB { get; set; } = string.Empty;
     public ConflictType Type { get; set; }
     public Region Region { get; set; }
     public int StartYear { get; set; }
@@ -15,4 +14,4 @@ public class Conflict
     // Navigation properties
     public List<ConflictYear> Years { get; set; } = [];
     public List<Country> Countries { get; set; } = [];
-}
+} 

@@ -1,5 +1,4 @@
-﻿
-using ConflictMap.Infrastructure.Data;
+﻿using ConflictMap.Infrastructure.Data;
 using ConflictMap.Infrastructure.DataSources;
 using ConflictMap.Infrastructure.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -29,8 +28,6 @@ public class ConflictImportService(IConflictDataSource source, AppDbContext db)
                 {
                     ConflictId = conflictId,
                     Location = row.Location,
-                    SideA = row.SideA,
-                    SideB = row.SideB,
                     Type = UcdpMapper.ToConflictType(row.TypeOfConflict),
                     Region = UcdpMapper.ToRegion(row.Region),
                     StartYear = UcdpMapper.ToYear(row.StartDate)
@@ -38,10 +35,12 @@ public class ConflictImportService(IConflictDataSource source, AppDbContext db)
                 conflicts.Add(conflictId, conflict);
             }
 
-            // The episode: one ConflictYear per row
+            // The episode: one ConflictYear per row, with that year's sides
             conflict.Years.Add(new ConflictYear
             {
                 Year = int.Parse(row.Year),
+                SideA = row.SideA,
+                SideB = row.SideB,
                 Intensity = int.Parse(row.IntensityLevel)
             });
         }
@@ -51,4 +50,4 @@ public class ConflictImportService(IConflictDataSource source, AppDbContext db)
 
         return conflicts.Count;
     }
-}
+} 

@@ -43,14 +43,6 @@ namespace ConflictMap.Infrastructure.Migrations
                     b.Property<int>("Region")
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("SideA")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("SideB")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
                     b.Property<int>("StartYear")
                         .HasColumnType("INTEGER");
 
@@ -82,6 +74,14 @@ namespace ConflictMap.Infrastructure.Migrations
 
                     b.Property<int>("Intensity")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("SideA")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SideB")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("Year")
                         .HasColumnType("INTEGER");
