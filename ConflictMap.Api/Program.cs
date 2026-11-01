@@ -77,6 +77,9 @@ app.MapGet("/api/conflicts/{id:int}", async (int id, IConflictService service, C
         ? Results.Problem(statusCode: 404, title: "Konflikten hittades inte", detail: $"Ingen konflikt med id {id}.")
         : Results.Ok(conflict);
 });
+// 3. Stats per country for a given year (used to colour the map)
+app.MapGet("/api/countries/stats", async (int year, IConflictService service, CancellationToken ct) =>
+    Results.Ok(await service.GetCountryStatsAsync(year, ct)));
 
 // ---------- TEMPORARY test endpoints ----------
 

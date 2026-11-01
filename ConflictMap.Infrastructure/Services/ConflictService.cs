@@ -8,6 +8,7 @@ public interface IConflictService
 {
     Task<PagedResult<ConflictSummaryDto>> GetConflictsAsync(ConflictQuery query, CancellationToken ct = default);
     Task<ConflictDetailDto?> GetConflictAsync(int id, CancellationToken ct = default);
+    Task<IReadOnlyList<CountryStatDto>> GetCountryStatsAsync(int year, CancellationToken ct = default);   // NEW
 }
 
 // Reads from the database and returns DTOs from the contract
@@ -45,8 +46,8 @@ public class ConflictService(AppDbContext db) : IConflictService
             .Select(cy => new ConflictSummaryDto(
                 cy.ConflictId,
                 cy.Conflict.Location,
-                cy.SideA,                 // CHANGED: the sides of this year
-                cy.SideB,                 // CHANGED
+                cy.SideA,
+                cy.SideB,
                 cy.Year,
                 cy.Conflict.Type,
                 cy.Intensity,
@@ -67,7 +68,7 @@ public class ConflictService(AppDbContext db) : IConflictService
 
         var years = conflict.Years.OrderBy(y => y.Year).ToList();
 
-        // CHANGED: the detail page shows the sides from the most recent year
+        // The detail page shows the sides from the most recent year
         var latest = years.Last();
 
         var yearDtos = years
@@ -78,5 +79,38 @@ public class ConflictService(AppDbContext db) : IConflictService
         return new ConflictDetailDto(
             conflict.ConflictId, conflict.Location, latest.SideA, latest.SideB,
             conflict.Type, conflict.Region, conflict.StartYear, yearDtos, Source);
+    }
+
+    // NEW: one row per country with conflicts in the given year (used to colour the map)
+    public async Task<IReadOnlyList<CountryStatDto>> GetCountryStatsAsync(
+        int year, CancellationToken ct = default)
+    {
+        // 1. Get one row per (conflict year, country) from the database
+        var rows = await db.ConflictYears
+            .AsNoTracking()
+            .Where(cy => cy.Year == year)
+            .SelectMany(cy => cy.Conflict.Countries, (cy, country) => new
+            {
+                cy.ConflictId,
+                country.IsoCode,
+                country.Name,
+                cy.Intensity,
+                Deaths = cy.BattleDeathsBest ?? 0
+            })
+            .ToListAsync(ct);
+
+        // 2. Group by ISO code in memory (several historical codes can share one ISO code)
+        return rows
+            .GroupBy(r => r.IsoCode)
+            .Select(g => new CountryStatDto(
+                IsoCode: g.Key,
+                CountryName: g.First().Name,
+                Year: year,
+                ActiveConflicts: g.Select(r => r.ConflictId).Distinct().Count(),
+                BattleDeaths: g.Sum(r => r.Deaths),
+                MaxIntensity: g.Max(r => r.Intensity)))
+            .OrderByDescending(s => s.MaxIntensity)
+            .ThenByDescending(s => s.ActiveConflicts)
+            .ToList();
     }
 }
