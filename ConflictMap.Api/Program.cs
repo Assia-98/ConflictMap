@@ -100,5 +100,17 @@ app.MapGet("/test/import", async (ConflictImportService importer, AppDbContext d
     var yearsInDb = await db.ConflictYears.CountAsync(ct);
     return new { Imported = imported, ConflictsInDb = conflictsInDb, YearsInDb = yearsInDb };
 });
+// TEMPORARY: check the countries
+app.MapGet("/test/countries", async (AppDbContext db, CancellationToken ct) =>
+{
+    var total = await db.Countries.CountAsync(ct);
+    var missingIso = await db.Countries.Where(c => c.IsoCode == "")
+        .Select(c => new { c.GwCode, c.Name }).ToListAsync(ct);
+    var missingName = await db.Countries.Where(c => c.Name.StartsWith("GW "))
+        .Select(c => new { c.GwCode, c.IsoCode }).ToListAsync(ct);
+
+    return new { Total = total, MissingIso = missingIso, MissingName = missingName };
+});
+
 
 app.Run();
