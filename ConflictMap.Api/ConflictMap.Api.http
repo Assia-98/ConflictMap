@@ -1,6 +1,25 @@
-@ConflictMap.Api_HostAddress = http://localhost:5240
+@Api = http://localhost:5240
 
-GET {{ConflictMap.Api_HostAddress}}/weatherforecast/
-Accept: application/json
+### 1. Konflikter år 2020, fem per sida
+GET {{Api}}/api/conflicts?year=2020&pageSize=5
 
-###
+### 1. Filtrera på region och typ
+GET {{Api}}/api/conflicts?region=Africa&type=Intrastate&pageSize=5
+
+### 1. Filtrera på land med ISO-kod (som kartan gör)
+GET {{Api}}/api/conflicts?country=ETH&year=2020
+
+### 1. Filtrera på land med namn
+GET {{Api}}/api/conflicts?country=Ethiopia&year=2020
+
+### 2. En konflikt med alla år
+GET {{Api}}/api/conflicts/11342
+
+### 2. En konflikt som inte finns (ska ge 404)
+GET {{Api}}/api/conflicts/99999
+
+### 3. Statistik per land för kartan
+GET {{Api}}/api/countries/stats?year=2020
+
+### Felhantering: för stor sida (ska ge 400)
+GET {{Api}}/api/conflicts?pageSize=500 
