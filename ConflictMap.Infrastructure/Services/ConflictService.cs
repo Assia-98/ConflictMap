@@ -25,9 +25,11 @@ public class ConflictService(AppDbContext db) : IConflictService
 
         if (query.Year is not null)
             rows = rows.Where(cy => cy.Year == query.Year);
-
+        
+        // Country: accepts both an ISO code (from the map, e.g. "ETH") and a name (e.g. "Ethiopia")
         if (!string.IsNullOrWhiteSpace(query.Country))
-            rows = rows.Where(cy => cy.Conflict.Location.Contains(query.Country));
+            rows = rows.Where(cy => cy.Conflict.Countries.Any(c =>
+                c.IsoCode == query.Country || c.Name.Contains(query.Country)));
 
         if (query.Region is not null)
             rows = rows.Where(cy => cy.Conflict.Region == query.Region);
