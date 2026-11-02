@@ -28,6 +28,8 @@ builder.Services.AddHttpClient<IConflictDataSource, UcdpApiSource>(client =>
 });
 
 builder.Services.AddScoped<ConflictImportService>();
+// Runs the UCDP import once when the app starts
+builder.Services.AddHostedService<UcdpImportBackgroundService>();
 builder.Services.AddScoped<IConflictService, ConflictService>();   // NEW
 
 // NEW: send enums as text ("Intrastate") instead of numbers, as in the contract
@@ -96,13 +98,7 @@ app.MapGet("/test/conflicts", async (IConflictDataSource source, CancellationTok
     return new { Count = rows.Count, First = rows.FirstOrDefault() };
 });
 
-app.MapGet("/test/import", async (ConflictImportService importer, AppDbContext db, CancellationToken ct) =>
-{
-    var imported = await importer.ImportAsync(ct);
-    var conflictsInDb = await db.Conflicts.CountAsync(ct);
-    var yearsInDb = await db.ConflictYears.CountAsync(ct);
-    return new { Imported = imported, ConflictsInDb = conflictsInDb, YearsInDb = yearsInDb };
-});
+
 // TEMPORARY: check the countries
 app.MapGet("/test/countries", async (AppDbContext db, CancellationToken ct) =>
 {
