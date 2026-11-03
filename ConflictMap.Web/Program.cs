@@ -10,7 +10,14 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-builder.Services.AddScoped<IConflictApiClient, MockConflictApiClient>();
+// Finns en API-adress används riktig data, annars låtsasdata
+var apiBaseUrl = builder.Configuration["Api:BaseUrl"];
+if (string.IsNullOrWhiteSpace(apiBaseUrl))
+    builder.Services.AddScoped<IConflictApiClient, MockConflictApiClient>();
+else
+    builder.Services.AddHttpClient<IConflictApiClient, HttpConflictApiClient>(
+        client => client.BaseAddress = new Uri(apiBaseUrl));
+
 builder.Services.AddScoped<MapState>();
 
 var app = builder.Build();
