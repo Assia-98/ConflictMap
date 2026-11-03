@@ -1,0 +1,130 @@
+﻿@implements IDisposable
+@inject IConflictApiClient Api
+@inject MapState State
+
+<section class="card conflict-list" aria-labelledby="list-title" aria-busy="@(loading ? "true" : "false")">
+    <header class="card-header">
+        <h2 id="list-title">Konflikter @State.Year</h2>
+        @if (result is not null)
+        {
+            <p class="muted">@result.TotalCount träffar</p>
+        }
+    </header>
+
+    @if (error is not null)
+    {
+        <div class="error-box" role="alert">
+            <p>@error</p>
+            <button class="btn" @onclick="LoadAsync">Försök igen</button>
+        </div>
+    }
+    else if (result is null)
+    {
+        <p class="muted">Laddar konflikter…</p>
+    }
+    else if (result.Items.Count == 0)
+    {
+        <p class="muted">Inga konflikter matchar filtret.</p>
+    }
+    else
+    {
+        <div class="table-wrap">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th scope="col">Plats</th>
+                        <th scope="col">Parter</th>
+                        <th scope="col">Typ</th>
+                        <th scope="col" class="num">Dödsfall (best)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var c in result.Items)
+                    {
+                        <tr>
+                            <td>
+                                <a href="conflicts/@c.ConflictId">@c.Location</a>
+                                @if (c.Intensity == 2)
+                                {
+                                    <span class="badge-war">Krig</span>
+                                }
+                            </td>
+                            <td>@c.SideA – @c.SideB</td>
+                            <td>@Labels.Type(c.Type)</td>
+                            <td class="num">@(c.BattleDeaths?.ToString("N0", Sv) ?? "–")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <nav class="pager" aria-label="Sidor">
+            <button class="btn" disabled="@(State.Page <= 1 || loading)"
+                    @onclick="() => State.SetPage(State.Page - 1)">← Föregående</button>
+            <span>Sida @State.Page av @TotalPages</span>
+            <button class="btn" disabled="@(State.Page >= TotalPages || loading)"
+                    @onclick="() => State.SetPage(State.Page + 1)">Nästa →</button>
+        </nav>
+    }
+</section>
+
+@code {
+    private static readonly CultureInfo Sv = CultureInfo.GetCultureInfo("sv-SE");
+
+    private PagedResult<ConflictSummaryDto>? result;
+    private string? error;
+    private bool loading;
+    private CancellationTokenSource? cts;
+
+    private int TotalPages => result is null
+        ? 1
+        : Math.Max(1, (int)Math.Ceiling(result.TotalCount / (double)result.PageSize));
+
+    protected override async Task OnInitializedAsync()
+    {
+        // OBSERVER: prenumerera på det delade tillståndet
+        State.Changed += OnStateChanged;
+        await LoadAsync();
+    }
+
+    private void OnStateChanged(StateChange change)
+    {
+        // Ladda bara om när filter eller sida ändras, inte när kartan markerar länder
+        if (change.HasFlag(StateChange.Filters) || change.HasFlag(StateChange.Page))
+            _ = InvokeAsync(LoadAsync);
+    }
+
+    private async Task LoadAsync()
+    {
+        // Avbryt ett gammalt anrop om användaren hinner ändra filtret igen
+        cts?.Cancel();
+        cts = new CancellationTokenSource();
+        var token = cts.Token;
+
+        loading = true;
+        error = null;
+        StateHasChanged();
+
+        try
+        {
+            result = await Api.GetConflictsAsync(State.ToQuery(), token);
+        }
+        catch (OperationCanceledException)
+        {
+            return;   // ett nyare anrop har tagit över
+        }
+        catch (Exception)
+        {
+            error = "Kunde inte hämta konflikterna. Försök igen.";
+        }
+
+        loading = false;
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        State.Changed -= OnStateChanged;
+        cts?.Cancel();
+    }
+}

@@ -253,5 +253,143 @@ a:focus-visible, button:focus-visible { outline: 3px solid var(--accent); outlin
     color: #fff;
     z-index: 1000;
 }
-#blazor-error-ui a { color: #fff; margin-left: 12px; }
-#blazor-error-ui .dismiss { cursor: pointer; float: right; }
+#blazor-error-ui a { 
+    color: #fff; 
+    margin-left: 12px; }
+#blazor-error-ui .dismiss { 
+    cursor: pointer;
+    float: right; }
+
+/* ---------- Kortrubriker ---------- */
+.card-header { 
+    display: flex;
+    align-items: baseline; 
+    justify-content: space-between; 
+    gap: 12px; 
+    margin-bottom: 12px; }
+
+.card-header h2 {
+    font-size: 1.1rem;
+    margin: 0; }
+
+.card-header p {
+    margin: 0; }
+
+/* ---------- Knappar ---------- */
+.btn {
+    font: inherit; 
+    padding: 6px 14px;
+    border-radius: 8px; 
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--surface); 
+    color: var(--text);
+}
+.btn:hover:not(:disabled) {
+    border-color: var(--accent); }
+
+.btn:disabled { 
+    opacity: 0.5; 
+    cursor: default; }
+
+.chip {
+    font: inherit;
+    font-size: 0.85rem;
+    padding: 4px 10px; 
+    border-radius: 999px; 
+    cursor: pointer;
+    border: 1px solid var(--accent); 
+    background: transparent; 
+    color: var(--accent);
+}
+
+/* ---------- Filter ---------- */
+.filter-bar { 
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end; 
+    gap: 16px 24px;
+}
+
+.field { 
+    display: flex; 
+    flex-direction: column;
+    gap: 4px; 
+    font-size: 0.9rem; 
+}
+
+.field-year {
+    flex: 1 1 260px; }
+
+.field-year input {
+    width: 100%; 
+    accent-color: var(--accent); 
+}
+
+.field select {
+    font: inherit; 
+    padding: 6px 8px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface); 
+    color: var(--text);
+}
+.field-actions { 
+    flex-direction: row;
+    align-items: center; 
+    gap: 8px; 
+    margin-left: auto; }
+
+/* ---------- Lista ---------- */
+.table-wrap { 
+    overflow-x: auto; }
+
+.table {
+    width: 100%;
+    border-collapse: collapse; 
+    font-size: 0.9rem; }
+
+.table th, .table td { 
+    text-align: left; 
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border); 
+    vertical-align: top; }
+
+.table th { 
+    color: var(--text-muted); 
+    font-weight: 600; }
+
+.table .num { 
+    text-align: right; 
+    font-variant-numeric: tabular-nums; 
+    white-space: nowrap; }
+
+.badge-war {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 0 6px;
+    border-radius: 4px;
+    font-size: 0.75rem; 
+    font-weight: 600; 
+    background: #c2410c; 
+    color: #fff;
+    
+}
+.conflict-list[aria-busy="true"] .table {
+    opacity: 0.5; }
+
+.pager { 
+    display: flex; 
+    align-items: center; 
+    justify-content: space-between; 
+    gap: 12px; margin-top: 12px; 
+    font-size: 0.9rem; }
+
+.error-box { 
+    color: var(--danger); }
+
+@media (max-width: 600px) {
+    .field-actions { margin-left: 0; }
+    .table th:nth-child(3),
+    .table td:nth-child(3) { display: none; }
+}

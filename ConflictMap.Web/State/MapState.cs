@@ -22,7 +22,8 @@ public enum StateChange
 public sealed class MapState
 {
     public const int FirstYear = 1946;
-    public const int DefaultYear = 2023;   // justera när A vet senaste året i datan
+    public const int LastYear = 2025;
+    public const int DefaultYear = LastYear;  
 
     public int Year { get; private set; } = DefaultYear;
     public Region? Region { get; private set; }
@@ -47,7 +48,7 @@ public sealed class MapState
 
     public void SetYear(int year)
     {
-        year = Math.Clamp(year, FirstYear, DateTime.Now.Year);
+        year = Math.Clamp(year, FirstYear, LastYear);
         if (year == Year) return;
         Year = year;
         Page = 1;

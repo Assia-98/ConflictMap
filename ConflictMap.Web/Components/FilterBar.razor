@@ -1,0 +1,68 @@
+﻿@implements IDisposable
+@inject MapState State
+
+<section class="card filter-bar" aria-label="Filter">
+    <div class="field field-year">
+        <label for="year">År: <strong>@State.Year</strong></label>
+        <input id="year" type="range"
+               min="@MapState.FirstYear" max="@MapState.LastYear"
+               value="@State.Year" @onchange="OnYearChanged" />
+    </div>
+
+    <div class="field">
+        <label for="region">Region</label>
+        <select id="region" value="@(State.Region?.ToString() ?? "")" @onchange="OnRegionChanged">
+            <option value="">Alla regioner</option>
+            @foreach (var r in Enum.GetValues<Region>())
+            {
+                <option value="@r">@Labels.Region(r)</option>
+            }
+        </select>
+    </div>
+
+    <div class="field">
+        <label for="type">Typ</label>
+        <select id="type" value="@(State.Type?.ToString() ?? "")" @onchange="OnTypeChanged">
+            <option value="">Alla typer</option>
+            @foreach (var t in Enum.GetValues<ConflictType>())
+            {
+                <option value="@t">@Labels.Type(t)</option>
+            }
+        </select>
+    </div>
+
+    <div class="field field-actions">
+        @if (State.CountryIso is not null)
+        {
+            <button class="chip" @onclick="() => State.SelectCountry(null)"
+                    aria-label="Ta bort landfilter @State.CountryIso">
+                Land: @State.CountryIso ✕
+            </button>
+        }
+        <button class="btn" @onclick="State.ResetFilters">Rensa filter</button>
+    </div>
+</section>
+
+@code {
+    protected override void OnInitialized()
+    {
+        // OBSERVER: lyssna, så att filtret visar rätt år även när chatten eller kartan ändrar det
+        State.Changed += OnStateChanged;
+    }
+
+    private void OnStateChanged(StateChange change) => InvokeAsync(StateHasChanged);
+
+    private void OnYearChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var year))
+            State.SetYear(year);
+    }
+
+    private void OnRegionChanged(ChangeEventArgs e) =>
+        State.SetRegion(Enum.TryParse<Region>(e.Value?.ToString(), out var r) ? r : null);
+
+    private void OnTypeChanged(ChangeEventArgs e) =>
+        State.SetType(Enum.TryParse<ConflictType>(e.Value?.ToString(), out var t) ? t : null);
+
+    public void Dispose() => State.Changed -= OnStateChanged;
+}
