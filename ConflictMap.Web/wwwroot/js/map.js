@@ -8,6 +8,10 @@ let statsByIso = new Map();
 let highlighted = new Set();
 let selectedIso = null;
 
+// Ritar om kartan när datorn byter mellan ljust och mörkt läge
+const themeQuery = window.matchMedia("(prefers-color-scheme: dark)");
+const onThemeChange = () => restyle();
+
 // Samma gränser som legenden i WorldMap.razor
 const BUCKETS = [
     { min: 10000, color: "#7f1d1d" },
@@ -17,7 +21,8 @@ const BUCKETS = [
 ];
 
 // Koder där Natural Earth och backend skiljer sig åt
-const ISO_ALIASES = { KOS: "XKX" };
+// Kosovo, Somaliland och Nordcypern räknas till XKX, Somalia och Cypern i UCDP
+const ISO_ALIASES = { KOS: "XKX", SOL: "SOM", CYN: "CYP" };
 
 // Natural Earth skriver ISO-koden på olika sätt. Frankrike och Norge har "-99" i ISO_A3.
 function isoOf(feature) {
@@ -34,13 +39,19 @@ function nameOf(feature) {
     return p.NAME || p.ADMIN || p.name || isoOf(feature) || "";
 }
 
-// Färg för länder utan konflikt hämtas från CSS (--map-land), så den följer ljust och mörkt läge
-function landColor() {
-    return getComputedStyle(document.documentElement).getPropertyValue("--map-land").trim() || "#e5e7eb";
+// Läser en färg från CSS, så att kartan följer ljust och mörkt läge
+function cssVar(name, fallback) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
 }
+
+// Dödsfall finns bara från 1989. Före det färgas länderna efter intensitet.
+const DEATHS_FROM_YEAR = 1989;
 
 function colorFor(stat) {
     if (!stat) return null;
+    if (stat.year < DEATHS_FROM_YEAR) {
+        return stat.maxIntensity >= 2 ? "#c2410c" : "#f59e0b";
+    }
     const deaths = stat.battleDeaths ?? 0;
     return BUCKETS.find(b => deaths >= b.min).color;
 }
@@ -50,10 +61,10 @@ function styleFor(feature) {
     const fill = colorFor(statsByIso.get(iso));
     const marked = highlighted.has(iso) || iso === selectedIso;
     return {
-        fillColor: fill ?? landColor(),
+        fillColor: fill ?? cssVar("--map-land", "#d6d2ca"),
         fillOpacity: 1,
-        color: marked ? "#3b82f6" : "#8a857d",
-        weight: marked ? 2.5 : 0.4
+        color: marked ? cssVar("--highlight", "#0f766e") : cssVar("--map-border", "#ffffff"),
+        weight: marked ? 2.5 : 0.6
     };
 }
 
@@ -66,9 +77,16 @@ function tooltipFor(feature) {
     const stat = statsByIso.get(isoOf(feature));
     const name = escapeHtml(stat?.countryName || nameOf(feature));
     if (!stat) return `<strong>${name}</strong><br>Ingen registrerad konflikt`;
+
+    const deaths = stat.year < DEATHS_FROM_YEAR
+        ? "uppgift saknas (före 1989)"
+        : (stat.battleDeaths ?? 0).toLocaleString("sv-SE");
+    const level = stat.maxIntensity >= 2 ? "krig (1 000+ döda)" : "mindre konflikt";
+
     return `<strong>${name}</strong><br>` +
         `Aktiva konflikter: ${stat.activeConflicts}<br>` +
-        `Dödsfall (best): ${stat.battleDeaths.toLocaleString("sv-SE")}`;
+        `Högsta nivå: ${level}<br>` +
+        `Dödsfall (best): ${deaths}`;
 }
 
 /** Skapar kartan och laddar ländernas gränser. */
@@ -104,6 +122,8 @@ export async function init(element, ref, geoJsonUrl) {
         }
     }).addTo(map);
 
+    themeQuery.addEventListener("change", onThemeChange);
+
     // Containern kan ha bytt storlek medan kartan laddade
     setTimeout(() => map && map.invalidateSize(), 0);
 }
@@ -134,6 +154,7 @@ function restyle() {
 }
 
 export function dispose() {
+    themeQuery.removeEventListener("change", onThemeChange);
     if (map) {
         map.remove();
         map = null;
