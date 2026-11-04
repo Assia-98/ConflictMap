@@ -22,4 +22,33 @@ GET {{Api}}/api/conflicts/99999
 GET {{Api}}/api/countries/stats?year=2020
 
 ### Felhantering: för stor sida (ska ge 400)
-GET {{Api}}/api/conflicts?pageSize=500 
+GET {{Api}}/api/conflicts?pageSize=500
+
+### 4. Fråga AI:n
+# @timeout 180
+POST {{Api}}/api/chat
+Content-Type: application/json
+
+{
+  "question": "Vilka länder hade flest stridsrelaterade dödsfall år 2020?",
+  "year": 2020
+}
+
+### 4. AI: konflikter i en region (ska använda GetConflicts)
+# @timeout 180
+POST {{Api}}/api/chat
+Content-Type: application/json
+
+{
+  "question": "Vilka konflikter fanns i Afrika år 2020?",
+  "year": 2020
+}
+
+### 4. AI: år utan dödsfallsdata (ska säga att uppgiften saknas)
+# @timeout 180
+POST {{Api}}/api/chat
+Content-Type: application/json
+
+{
+  "question": "Hur många dog i strid i Indien år 1975?"
+}
