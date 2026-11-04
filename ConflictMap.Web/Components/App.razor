@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <base href="/" />
     <ResourcePreloader />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="@Assets["app.css"]" />
     <link rel="stylesheet" href="@Assets["ConflictMap.Web.styles.css"]" />
     <ImportMap />
@@ -16,6 +17,7 @@
 <body>
     <Routes @rendermode="InteractiveServer" /> @* gör sidan interaktiv*@
     <ReconnectModal />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="@Assets["_framework/blazor.web.js"]"></script>
 </body>
 
