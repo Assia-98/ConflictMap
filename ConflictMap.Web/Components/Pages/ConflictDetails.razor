@@ -1,23 +1,181 @@
 ﻿@page "/conflicts/{Id:int}"
+@inject IConflictApiClient Api
+@inject MapState State
+@inject NavigationManager Nav
 
-<PageTitle>Konflikt @Id – Konfliktkartan</PageTitle>
+<PageTitle>@(conflict?.Location ?? "Konflikt") – Konfliktkartan</PageTitle>
 
 <nav class="breadcrumb" aria-label="Brödsmulor">
     <a href="">← Tillbaka till kartan</a>
 </nav>
 
-<div class="details-grid">
-    <section class="card placeholder">
-        <h1>Konflikt @Id</h1>
-        <p>Namn, parter, typ, region och länder (GET /api/conflicts/@Id)</p>
+@if (loading)
+{
+    <section class="card"><p class="muted">Laddar konflikten…</p></section>
+}
+else if (notFound)
+{
+    <section class="card">
+        <h1>Konflikten hittades inte</h1>
+        <p>Det finns ingen konflikt med id @Id.</p>
     </section>
+}
+else if (error is not null)
+{
+    <section class="card" role="alert">
+        <p class="error-box">@error</p>
+        <button class="btn" @onclick="LoadAsync">Försök igen</button>
+    </section>
+}
+else if (conflict is not null)
+{
+    <div class="details-stack">
+        <section class="card details-header">
+            <h1>@conflict.Location</h1>
+            <p class="parties">@conflict.SideA <span class="muted">mot</span> @conflict.SideB</p>
 
-    <section class="card placeholder">
-        <span class="placeholder-label">År för år</span>
-        <p>Intensitet och dödsfall per år</p>
-    </section>
-</div>
+            <dl class="facts-grid">
+                <div><dt>Typ</dt><dd>@Labels.Type(conflict.Type)</dd></div>
+                <div><dt>Region</dt><dd>@Labels.Region(conflict.Region)</dd></div>
+                <div><dt>Startår</dt><dd>@conflict.StartYear</dd></div>
+                <div><dt>År med aktiv konflikt</dt><dd>@conflict.Years.Count</dd></div>
+                <div><dt>År som krig (1 000+ döda)</dt><dd>@warYears</dd></div>
+                <div>
+                    <dt>Dödsfall totalt (best)</dt>
+                    <dd>@(totalDeaths?.ToString("N0", Sv) ?? "Uppgift saknas")</dd>
+                </div>
+            </dl>
+            <p class="muted small">Parterna gäller det senaste året. Dödsfall finns bara från 1989.</p>
+        </section>
+
+        <section class="card" aria-labelledby="years-title">
+            <h2 id="years-title">År för år</h2>
+            <div class="table-wrap">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th scope="col">År</th>
+                            <th scope="col">Nivå</th>
+                            <th scope="col">Dödsfall (best)</th>
+                            <th scope="col" class="num">Intervall (låg–hög)</th>
+                            <th scope="col"><span class="visually-hidden">Karta</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var y in conflict.Years)
+                        {
+                            <tr>
+                                <td>@y.Year</td>
+                                <td>
+                                    @if (y.Intensity == 2)
+                                    {
+                                        <span class="badge-war">Krig</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge-minor">Mindre</span>
+                                    }
+                                </td>
+                                <td class="bar-cell">
+                                    @if (y.BattleDeathsBest is int best)
+                                    {
+                                        <div class="bar-row">
+                                            <div class="bar" aria-hidden="true">
+                                                <span style="width: @Pct(best)%"></span>
+                                            </div>
+                                            <span class="bar-value">@best.ToString("N0", Sv)</span>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <span class="muted">Uppgift saknas</span>
+                                    }
+                                </td>
+                                
+                                <td class="num">
+                                    @if (y.BattleDeathsLow is int low && y.BattleDeathsHigh is int high)
+                                    {
+                                        @($"{low.ToString("N0", Sv)}–{high.ToString("N0", Sv)}")
+                                    }
+                                    else
+                                    {
+                                        <span class="muted">–</span>
+                                    }
+                                </td>
+                                <td>
+                                    <button class="btn btn-small" @onclick="() => ShowOnMap(y.Year)">
+                                        Visa på kartan
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <p class="muted small source">Källa: @conflict.Source</p>
+        </section>
+    </div>
+}
 
 @code {
     [Parameter] public int Id { get; set; }
+
+    private static readonly CultureInfo Sv = CultureInfo.GetCultureInfo("sv-SE");
+
+    private ConflictDetailDto? conflict;
+    private bool loading = true;
+    private bool notFound;
+    private string? error;
+
+    private int warYears;
+    private int? totalDeaths;
+    private int maxDeaths;
+
+    // Körs när sidan öppnas och om id:t i adressen ändras
+    protected override async Task OnParametersSetAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        loading = true;
+        notFound = false;
+        error = null;
+
+        try
+        {
+            conflict = await Api.GetConflictAsync(Id);
+            notFound = conflict is null;
+
+            if (conflict is not null)
+            {
+                warYears = conflict.Years.Count(y => y.Intensity == 2);
+
+                var known = conflict.Years
+                    .Where(y => y.BattleDeathsBest is not null)
+                    .Select(y => y.BattleDeathsBest!.Value)
+                    .ToList();
+
+                totalDeaths = known.Count > 0 ? known.Sum() : null;
+                maxDeaths = known.Count > 0 ? known.Max() : 0;
+            }
+        }
+        catch (Exception)
+        {
+            error = "Kunde inte hämta konflikten. Försök igen.";
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    // Stapelns bredd i procent av årets högsta värde. Heltal, så att det blir "45" och inte "45,3" i CSS.
+    private int Pct(int deaths) =>
+        maxDeaths == 0 || deaths == 0 ? 0 : Math.Max(1, (int)Math.Round(100.0 * deaths / maxDeaths));
+
+    // OBSERVER: sätt året i det delade tillståndet. Kartan och listan visar det året när vi går tillbaka.
+    private void ShowOnMap(int year)
+    {
+        State.SetYear(year);
+        Nav.NavigateTo("");
+    }
 }
