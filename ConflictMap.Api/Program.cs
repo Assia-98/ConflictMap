@@ -1,10 +1,13 @@
 using System.Text.Json.Serialization;
+using ConflictMap.Api.Ai;
 using ConflictMap.Contracts;
 using ConflictMap.Infrastructure.Data;
 using ConflictMap.Infrastructure.DataSources;
 using ConflictMap.Infrastructure.Import;
 using ConflictMap.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.AI;
+using OllamaSharp;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -30,9 +33,19 @@ builder.Services.AddHttpClient<IConflictDataSource, UcdpApiSource>(client =>
 builder.Services.AddScoped<ConflictImportService>();
 // Runs the UCDP import once when the app starts
 builder.Services.AddHostedService<UcdpImportBackgroundService>();
-builder.Services.AddScoped<IConflictService, ConflictService>();   // NEW
+builder.Services.AddScoped<IConflictService, ConflictService>();
 
-// NEW: send enums as text ("Intrastate") instead of numbers, as in the contract
+// NEW: AI with a local model via Ollama.
+// UseFunctionInvocation lets the AI call our tools automatically.
+builder.Services.AddChatClient(new OllamaApiClient(
+        new Uri(builder.Configuration["Ai:Endpoint"]!),
+        builder.Configuration["Ai:Model"]!))
+    .UseFunctionInvocation();
+
+builder.Services.AddScoped<ConflictTools>();   // NEW: a new toolbox (with empty notes) for every request
+builder.Services.AddScoped<ChatService>();     // NEW
+
+// Send enums as text ("Intrastate") instead of numbers, as in the contract
 builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
@@ -79,9 +92,34 @@ app.MapGet("/api/conflicts/{id:int}", async (int id, IConflictService service, C
         ? Results.Problem(statusCode: 404, title: "Konflikten hittades inte", detail: $"Ingen konflikt med id {id}.")
         : Results.Ok(conflict);
 });
+
 // 3. Stats per country for a given year (used to colour the map)
 app.MapGet("/api/countries/stats", async (int year, IConflictService service, CancellationToken ct) =>
     Results.Ok(await service.GetCountryStatsAsync(year, ct)));
+
+// 4. NEW: ask the AI a question about the data
+app.MapPost("/api/chat", async (
+    ChatRequestDto request,
+    ChatService chat,
+    ILogger<Program> logger,
+    CancellationToken ct) =>
+{
+    if (string.IsNullOrWhiteSpace(request.Question))
+        return Results.Problem(statusCode: 400, title: "Frågan saknas", detail: "Skriv en fråga.");
+
+    try
+    {
+        return Results.Ok(await chat.AskAsync(request, ct));
+    }
+    catch (Exception ex) when (!ct.IsCancellationRequested)
+    {
+        logger.LogError(ex, "The AI request failed.");
+        return Results.Problem(
+            statusCode: 503,
+            title: "AI-tjänsten svarar inte",
+            detail: "Kontrollera att Ollama körs och att modellen är hämtad.");
+    }
+});
 
 // ---------- TEMPORARY test endpoints ----------
 
@@ -98,8 +136,6 @@ app.MapGet("/test/conflicts", async (IConflictDataSource source, CancellationTok
     return new { Count = rows.Count, First = rows.FirstOrDefault() };
 });
 
-
-// TEMPORARY: check the countries
 app.MapGet("/test/countries", async (AppDbContext db, CancellationToken ct) =>
 {
     var total = await db.Countries.CountAsync(ct);
@@ -110,6 +146,5 @@ app.MapGet("/test/countries", async (AppDbContext db, CancellationToken ct) =>
 
     return new { Total = total, MissingIso = missingIso, MissingName = missingName };
 });
-
 
 app.Run();
