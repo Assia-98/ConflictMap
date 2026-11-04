@@ -17,6 +17,7 @@ public class ChatService(IChatClient chatClient, ConflictTools tools, AppDbConte
         Rules:
         - Always use the tools to get data. Only answer with numbers and facts the tools return.
         - Copy every number EXACTLY as the tool returns it. Never round, change or add digits.
+        - For "how many" questions, use TotalCount from the tool. Never count rows yourself.
         - Never guess or invent numbers. If the tools return no data, say that the data is missing.
         - The data covers 1946-2025. Battle-related deaths only exist from 1989.
         - Describe what the data shows. Do not take sides in conflicts.

@@ -32,3 +32,19 @@ Content-Type: application/json
   "question": "Vilka länder hade flest stridsrelaterade dödsfall år 2020?",
   "year": 2020
 }
+### 4. AI: konflikter i en region (ska använda GetConflicts)
+POST {{Api}}/api/chat
+Content-Type: application/json
+
+{
+  "question": "Vilka konflikter fanns i Afrika år 2020?",
+  "year": 2020
+}
+
+### 4. AI: år utan dödsfallsdata (ska säga att uppgiften saknas)
+POST {{Api}}/api/chat
+Content-Type: application/json
+
+{
+  "question": "Hur många dog i strid i Indien år 1975?"
+}
