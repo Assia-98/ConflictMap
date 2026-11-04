@@ -11,8 +11,4 @@
     <ProjectReference Include="..\ConflictMap.Contracts\ConflictMap.Contracts.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Compile Include="wwwroot\Labels.cs" />
-  </ItemGroup>
-
 </Project>
