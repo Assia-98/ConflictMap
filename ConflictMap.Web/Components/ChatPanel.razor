@@ -1,0 +1,146 @@
+﻿@implements IDisposable
+@inject IConflictApiClient Api
+@inject MapState State
+
+<section class="card chat-card" aria-labelledby="chat-title">
+    <header class="card-header">
+        <h2 id="chat-title">Fråga om konflikterna</h2>
+        @if (messages.Count > 0)
+        {
+            <button class="btn btn-small" @onclick="Clear" disabled="@sending">Rensa</button>
+        }
+    </header>
+
+    <div class="chat-log" role="log" aria-live="polite">
+        @if (messages.Count == 0)
+        {
+            <div class="chat-empty">
+                <p>Ställ en fråga på svenska. Länderna i svaret markeras på kartan.</p>
+                <ul class="suggestions">
+                    @foreach (var s in Suggestions)
+                    {
+                        <li><button class="chip" @onclick="() => AskAsync(s)" disabled="@sending">@s</button></li>
+                    }
+                </ul>
+            </div>
+        }
+
+        @foreach (var m in messages)
+        {
+            <article class="msg @(m.IsUser ? "msg-user" : "msg-ai")">
+                <span class="visually-hidden">@(m.IsUser ? "Du skrev:" : "AI:n svarade:")</span>
+                <p>@m.Text</p>
+
+                @if (!m.IsUser && m.Countries.Count > 0)
+                {
+                    <p class="msg-meta">Markerat på kartan: @string.Join(", ", m.Countries)</p>
+                }
+                @if (!m.IsUser && !string.IsNullOrWhiteSpace(m.Source))
+                {
+                    <p class="msg-meta">Källa: @m.Source</p>
+                }
+            </article>
+        }
+
+        @if (sending)
+        {
+            <div class="msg msg-ai typing" aria-label="AI:n skriver">
+                <span></span><span></span><span></span>
+            </div>
+        }
+
+        @if (error is not null)
+        {
+            <div class="msg msg-error" role="alert">
+                <p>@error</p>
+                <button class="btn btn-small" @onclick="RetryAsync">Försök igen</button>
+            </div>
+        }
+    </div>
+
+    <form class="chat-form" @onsubmit="SendAsync" @onsubmit:preventDefault>
+        <label for="chat-input" class="visually-hidden">Din fråga</label>
+        <input id="chat-input" type="text" maxlength="500" autocomplete="off"
+               placeholder="T.ex. Vilka konflikter fanns i Östafrika 2020?"
+               @bind="input" @bind:event="oninput" disabled="@sending" />
+        <button type="submit" class="btn btn-primary"
+                disabled="@(sending || string.IsNullOrWhiteSpace(input))">Skicka</button>
+    </form>
+</section>
+
+@code {
+    private sealed record ChatItem(bool IsUser, string Text, IReadOnlyList<string> Countries, string? Source);
+
+    private static readonly string[] Suggestions =
+    [
+        "Vilka konflikter fanns i Östafrika 2020?",
+        "Hur såg det ut i Mellanöstern 2023?",
+        "Vilka konflikter pågick i Ukraina 2022?"
+    ];
+
+    private readonly List<ChatItem> messages = [];
+    private string input = "";
+    private string? lastQuestion;
+    private bool sending;
+    private string? error;
+    private CancellationTokenSource? cts;
+
+    private Task SendAsync() => AskAsync(input);
+
+    private async Task AskAsync(string question)
+    {
+        question = question.Trim();
+        if (question.Length == 0 || sending) return;
+
+        messages.Add(new ChatItem(true, question, [], null));
+        lastQuestion = question;
+        input = "";
+
+        await SendToApiAsync(question);
+    }
+
+    private async Task SendToApiAsync(string question)
+    {
+        sending = true;
+        error = null;
+
+        // En lokal AI-modell (Ollama) kan vara långsam, därför 90 sekunder
+        cts?.Cancel();
+        cts = new CancellationTokenSource(TimeSpan.FromSeconds(90));
+
+        try
+        {
+            // Året från filtret skickas med, som kontraktet beskriver
+            var response = await Api.AskAsync(new ChatRequestDto(question, State.Year), cts.Token);
+            messages.Add(new ChatItem(false, response.Answer, response.HighlightCountries, response.Source));
+
+            // OBSERVER: chatten ändrar bara tillståndet. Kartan markerar länderna av sig själv.
+            State.ApplyChatResponse(response);
+        }
+        catch (OperationCanceledException)
+        {
+            error = "Svaret tog för lång tid. Försök igen.";
+        }
+        catch (Exception)
+        {
+            error = "Kunde inte få svar från AI:n. Försök igen.";
+        }
+        finally
+        {
+            sending = false;
+        }
+    }
+
+    private Task RetryAsync() =>
+        lastQuestion is null ? Task.CompletedTask : SendToApiAsync(lastQuestion);
+
+    private void Clear()
+    {
+        messages.Clear();
+        error = null;
+        lastQuestion = null;
+        State.ClearHighlight();
+    }
+
+    public void Dispose() => cts?.Cancel();
+}
