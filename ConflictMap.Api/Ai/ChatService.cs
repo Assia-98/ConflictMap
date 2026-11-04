@@ -21,7 +21,7 @@ public class ChatService(IChatClient chatClient, ConflictTools tools, AppDbConte
         - Never guess or invent numbers. If the tools return no data, say that the data is missing.
         - The data covers 1946-2025. Battle-related deaths only exist from 1989.
         - Describe what the data shows. Do not take sides in conflicts.
-        - Answer in the same language as the question, short and clear.
+        - Always answer in Swedish, with correct and simple Swedish. Keep country names as the tools return them.
         - End your answer with: "Källa: UCDP."
         """;
 
