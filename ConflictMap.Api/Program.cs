@@ -14,15 +14,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("Default")));
 
-// HttpClient for the UCDP API, with the token from User Secrets
-builder.Services.AddHttpClient("Ucdp", client =>
-{
-    client.BaseAddress = new Uri("https://ucdpapi.pcr.uu.se/api/");
-    client.DefaultRequestHeaders.Add("x-ucdp-access-token",
-        builder.Configuration["Ucdp:ApiToken"]);
-});
-
-// Strategy: use the UCDP API as data source
+// Strategy: use the UCDP API as data source, with the token from User Secrets
 builder.Services.AddHttpClient<IConflictDataSource, UcdpApiSource>(client =>
 {
     client.BaseAddress = new Uri("https://ucdpapi.pcr.uu.se/api/");
@@ -30,20 +22,21 @@ builder.Services.AddHttpClient<IConflictDataSource, UcdpApiSource>(client =>
         builder.Configuration["Ucdp:ApiToken"]);
 });
 
+// Import: runs once when the app starts if the database is empty
 builder.Services.AddScoped<ConflictImportService>();
-// Runs the UCDP import once when the app starts
 builder.Services.AddHostedService<UcdpImportBackgroundService>();
+
 builder.Services.AddScoped<IConflictService, ConflictService>();
 
-// NEW: AI with a local model via Ollama.
+// AI with a local model via Ollama.
 // UseFunctionInvocation lets the AI call our tools automatically.
 builder.Services.AddChatClient(new OllamaApiClient(
         new Uri(builder.Configuration["Ai:Endpoint"]!),
         builder.Configuration["Ai:Model"]!))
     .UseFunctionInvocation();
 
-builder.Services.AddScoped<ConflictTools>();   // NEW: a new toolbox (with empty notes) for every request
-builder.Services.AddScoped<ChatService>();     // NEW
+builder.Services.AddScoped<ConflictTools>();   // a new toolbox (with empty notes) for every request
+builder.Services.AddScoped<ChatService>();
 
 // Send enums as text ("Intrastate") instead of numbers, as in the contract
 builder.Services.ConfigureHttpJsonOptions(options =>
@@ -97,7 +90,7 @@ app.MapGet("/api/conflicts/{id:int}", async (int id, IConflictService service, C
 app.MapGet("/api/countries/stats", async (int year, IConflictService service, CancellationToken ct) =>
     Results.Ok(await service.GetCountryStatsAsync(year, ct)));
 
-// 4. NEW: ask the AI a question about the data
+// 4. Ask the AI a question about the data
 app.MapPost("/api/chat", async (
     ChatRequestDto request,
     ChatService chat,
@@ -121,31 +114,7 @@ app.MapPost("/api/chat", async (
     }
 });
 
-// ---------- TEMPORARY test endpoints ----------
-
-app.MapGet("/test/ucdp", async (IHttpClientFactory factory) =>
-{
-    var client = factory.CreateClient("Ucdp");
-    var json = await client.GetStringAsync("ucdpprioconflict/26.1?pagesize=1");
-    return Results.Content(json, "application/json");
-});
-
-app.MapGet("/test/conflicts", async (IConflictDataSource source, CancellationToken ct) =>
-{
-    var rows = await source.GetConflictRowsAsync(ct);
-    return new { Count = rows.Count, First = rows.FirstOrDefault() };
-});
-
-app.MapGet("/test/countries", async (AppDbContext db, CancellationToken ct) =>
-{
-    var total = await db.Countries.CountAsync(ct);
-    var missingIso = await db.Countries.Where(c => c.IsoCode == "")
-        .Select(c => new { c.GwCode, c.Name }).ToListAsync(ct);
-    var missingName = await db.Countries.Where(c => c.Name.StartsWith("GW "))
-        .Select(c => new { c.GwCode, c.IsoCode }).ToListAsync(ct);
-
-    return new { Total = total, MissingIso = missingIso, MissingName = missingName };
-});
-
 app.Run();
+
+// Makes Program visible to the API tests (WebApplicationFactory)
 public partial class Program { }

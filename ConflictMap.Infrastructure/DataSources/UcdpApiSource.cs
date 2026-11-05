@@ -1,10 +1,11 @@
 ﻿using System.Net.Http.Json;
 using ConflictMap.Infrastructure.DataSources.Ucdp;
+using Microsoft.Extensions.Logging;
 
 namespace ConflictMap.Infrastructure.DataSources;
 
 // Strategy #1: fetches rows from the UCDP API
-public class UcdpApiSource(HttpClient httpClient) : IConflictDataSource
+public class UcdpApiSource(HttpClient httpClient, ILogger<UcdpApiSource> logger) : IConflictDataSource
 {
     private const string Version = "26.1";
     private const int PageSize = 1000;
@@ -26,7 +27,7 @@ public class UcdpApiSource(HttpClient httpClient) : IConflictDataSource
         // Keep fetching until there is no next page (null or empty)
         while (!string.IsNullOrWhiteSpace(url) && pagesFetched < MaxPages)
         {
-            Console.WriteLine($"Fetching: {url}");
+            logger.LogInformation("Fetching UCDP page: {Url}", url);
 
             var response = await httpClient.GetFromJsonAsync<UcdpPagedResponse<T>>(url, ct);
             if (response is null) break;
