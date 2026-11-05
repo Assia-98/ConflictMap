@@ -7,12 +7,12 @@ namespace ConflictMap.Api.Ai;
 // A short, sorted row that is easy for a small AI model to read correctly
 public record CountryDeaths(string Country, string IsoCode, int BattleDeaths, int ActiveConflicts, bool IsWar);
 
-// NEW: the list of conflicts together with the exact total, counted by the database
+// The list of conflicts together with the exact total, counted by the database
 public record ConflictList(int TotalCount, List<ConflictSummaryDto> Conflicts);
 
 // The tools the AI model may call. Every number the AI uses comes from here, i.e. from the database.
 // The class also remembers what it fetched, so the map can highlight those countries.
-public class ConflictTools(IConflictService service)
+public class ConflictTools(IConflictService service, ILogger<ConflictTools> logger)
 {
     public HashSet<string> FetchedIsoCodes { get; } = [];
     public HashSet<int> FetchedConflictIds { get; } = [];
@@ -32,7 +32,9 @@ public class ConflictTools(IConflictService service)
         region = Clean(region);
         type = Clean(type);
 
-        Console.WriteLine($"TOOL GetConflicts: year={year}, country={country}, region={region}, type={type}");
+        logger.LogInformation(
+            "AI tool GetConflicts: year={Year}, country={Country}, region={Region}, type={Type}",
+            year, country, region, type);
 
         var query = new ConflictQuery(
             year, country, ParseEnum<Region>(region), ParseEnum<ConflictType>(type),
@@ -43,7 +45,7 @@ public class ConflictTools(IConflictService service)
         foreach (var item in result.Items)
             FetchedConflictIds.Add(item.ConflictId);
 
-        // CHANGED: the database's exact count goes along with the rows
+        // The database's exact count goes along with the rows
         return new ConflictList(result.TotalCount, result.Items.ToList());
     }
 
@@ -52,7 +54,7 @@ public class ConflictTools(IConflictService service)
         [Description("The UCDP conflict id, e.g. 11342.")] int conflictId,
         CancellationToken ct = default)
     {
-        Console.WriteLine($"TOOL GetConflictDetails: conflictId={conflictId}");
+        logger.LogInformation("AI tool GetConflictDetails: conflictId={ConflictId}", conflictId);
 
         var conflict = await service.GetConflictAsync(conflictId, ct);
         if (conflict is not null)
@@ -69,7 +71,7 @@ public class ConflictTools(IConflictService service)
         [Description("How many countries to return, 1-20. Default 10.")] int count = 10,
         CancellationToken ct = default)
     {
-        Console.WriteLine($"TOOL GetTopCountriesByDeaths: year={year}, count={count}");
+        logger.LogInformation("AI tool GetTopCountriesByDeaths: year={Year}, count={Count}", year, count);
 
         count = Math.Clamp(count, 1, 20);
         var stats = await service.GetCountryStatsAsync(year, ct);
@@ -96,4 +98,4 @@ public class ConflictTools(IConflictService service)
     // "africa" -> Region.Africa, unknown text -> null (no filter)
     private static T? ParseEnum<T>(string? value) where T : struct, Enum =>
         Enum.TryParse<T>(value, ignoreCase: true, out var result) ? result : null;
-}
+} 
