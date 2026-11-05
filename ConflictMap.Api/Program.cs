@@ -148,3 +148,4 @@ app.MapGet("/test/countries", async (AppDbContext db, CancellationToken ct) =>
 });
 
 app.Run();
+public partial class Program { }
