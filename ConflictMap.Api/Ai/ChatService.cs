@@ -22,7 +22,10 @@ public class ChatService(IChatClient chatClient, ConflictTools tools, AppDbConte
         - The data covers 1946-2025. Battle-related deaths only exist from 1989.
         - Describe what the data shows. Do not take sides in conflicts.
         - Always answer in Swedish, with correct and simple Swedish. Keep country names as the tools return them.
-        - End your answer with: "Källa: UCDP."
+        - If the question mentions a year, use that year. Only use the year selected in the app if the question has no year.
+        - If the user asks about a part of a region (for example East Africa or Southeast Asia), use the subRegion parameter in GetConflicts instead of region.
+        - Write "stridsrelaterade dödsfall" for battle-related deaths.
+        - Use the actor names exactly as the tools return them. Do not describe the groups with your own words.
         """;
 
     public async Task<ChatResponseDto> AskAsync(ChatRequestDto request, CancellationToken ct = default)
@@ -52,7 +55,12 @@ public class ChatService(IChatClient chatClient, ConflictTools tools, AppDbConte
         var response = await chatClient.GetResponseAsync(messages, options, ct);
 
         var highlight = await GetHighlightCountriesAsync(ct);
-        return new ChatResponseDto(response.Text, highlight, Source);
+        var answer = response.Messages
+            .LastOrDefault(m => m.Role == ChatRole.Assistant && !string.IsNullOrWhiteSpace(m.Text))
+            ?.Text ?? "";
+
+        return new ChatResponseDto(answer, highlight, Source);
+        
     }
 
     // Turns the tools' notes into ISO codes for the map
