@@ -14,13 +14,20 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("Default")));
 
-// Strategy: use the UCDP API as data source, with the token from User Secrets
-builder.Services.AddHttpClient<IConflictDataSource, UcdpApiSource>(client =>
-{
-    client.BaseAddress = new Uri("https://ucdpapi.pcr.uu.se/api/");
-    client.DefaultRequestHeaders.Add("x-ucdp-access-token",
-        builder.Configuration["Ucdp:ApiToken"]);
-});
+// Strategy 1: the UCDP API (turned off)
+// builder.Services.AddHttpClient<IConflictDataSource, UcdpApiSource>(client =>
+// {
+//     client.BaseAddress = new Uri("https://ucdpapi.pcr.uu.se/api/");
+//     client.DefaultRequestHeaders.Add("x-ucdp-access-token",
+//         builder.Configuration["Ucdp:ApiToken"]);
+// });
+
+// Strategy 2: the downloaded CSV files
+var dataFolder = Path.Combine(builder.Environment.ContentRootPath, "Data");
+
+builder.Services.AddSingleton<IConflictDataSource>(_ => new CsvFileSource(
+    conflictsFilePath: Path.Combine(dataFolder, "UcdpPrioConflict_v26_1.csv"),
+    deathsFilePath:    Path.Combine(dataFolder, "BattleDeaths_v26_1_conf.csv")));
 
 // Import: runs once when the app starts if the database is empty
 builder.Services.AddScoped<ConflictImportService>();
