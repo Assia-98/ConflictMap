@@ -1,6 +1,7 @@
 ﻿@implements IDisposable
 @inject IConflictApiClient Api
 @inject MapState State
+@using Markdig
 
 <section class="card chat-card" aria-labelledby="chat-title">
     <header class="card-header">
@@ -29,7 +30,14 @@
         {
             <article class="msg @(m.IsUser ? "msg-user" : "msg-ai")">
                 <span class="visually-hidden">@(m.IsUser ? "Du skrev:" : "AI:n svarade:")</span>
-                <p>@m.Text</p>
+                @if (m.IsUser)
+                {
+                    <p>@m.Text</p>
+                }
+                else
+                {
+                    <div class="msg-text">@RenderMarkdown(m.Text)</div>
+                }
 
                 @if (!m.IsUser && m.Countries.Count > 0)
                 {
@@ -77,7 +85,15 @@
         "Hur såg det ut i Mellanöstern 2023?",
         "Vilka konflikter pågick i Ukraina 2022?"
     ];
+    
+    private static readonly MarkdownPipeline MarkdownPipeline =
+        new MarkdownPipelineBuilder()
+            .DisableHtml()
+            .Build();
 
+    private static MarkupString RenderMarkdown(string text) =>
+        new MarkupString(Markdown.ToHtml(text ?? "", MarkdownPipeline));
+    
     private readonly List<ChatItem> messages = [];
     private string input = "";
     private string? lastQuestion;

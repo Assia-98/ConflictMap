@@ -11,4 +11,8 @@
     <ProjectReference Include="..\ConflictMap.Contracts\ConflictMap.Contracts.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Markdig" Version="1.6.0" />
+  </ItemGroup>
+
 </Project>
