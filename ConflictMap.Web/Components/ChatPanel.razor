@@ -120,10 +120,9 @@
         sending = true;
         error = null;
 
-        // En lokal AI-modell (Ollama) kan vara långsam, därför 90 sekunder
+        // En lokal AI-modell (Ollama) kan vara långsam, därför 180 sekunder
         cts?.Cancel();
-        cts = new CancellationTokenSource(TimeSpan.FromSeconds(90));
-
+        cts = new CancellationTokenSource(TimeSpan.FromSeconds(180));
         try
         {
             // Året från filtret skickas med, som kontraktet beskriver
