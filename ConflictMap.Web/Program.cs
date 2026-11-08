@@ -15,8 +15,11 @@ var apiBaseUrl = builder.Configuration["Api:BaseUrl"];
 if (string.IsNullOrWhiteSpace(apiBaseUrl))
     builder.Services.AddScoped<IConflictApiClient, MockConflictApiClient>();
 else
-    builder.Services.AddHttpClient<IConflictApiClient, HttpConflictApiClient>(
-        client => client.BaseAddress = new Uri(apiBaseUrl));
+    builder.Services.AddHttpClient<IConflictApiClient, HttpConflictApiClient>(client =>
+    {
+        client.BaseAddress = new Uri(apiBaseUrl);
+        client.Timeout = TimeSpan.FromMinutes(3);   // AI answers can take 30-90 seconds
+    }); 
 
 builder.Services.AddScoped<MapState>();
 
