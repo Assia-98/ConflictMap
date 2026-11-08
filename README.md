@@ -45,6 +45,8 @@ ConflictMap.Web  ──HTTP──▶  ConflictMap.Api  ──▶  ConflictMap.In
   ollama pull qwen2.5
   ```
 
+**Ingen UCDP-token behövs.** Datan finns som CSV-filer i projektet och importeras därifrån. En token behövs bara om ni vill hämta datan direkt från UCDP:s API i stället (se [Valfritt: hämta från UCDP:s API](#valfritt-hämta-från-ucdps-api)).
+
 ## Kom igång
 
 Alla kommandon körs från rotmappen (där `ConflictMap.slnx` ligger).
@@ -56,15 +58,7 @@ dotnet restore
 dotnet build
 ```
 
-### 2. Lägg in UCDP-token
-
-Token sparas med User Secrets och hamnar aldrig i Git.
-
-```bash
-dotnet user-secrets set "Ucdp:ApiToken" "DIN-TOKEN" --project ConflictMap.Api
-```
-
-### 3. Skapa databasen
+### 2. Skapa databasen
 
 ```bash
 dotnet ef database update --project ConflictMap.Infrastructure --startup-project ConflictMap.Api
@@ -72,7 +66,7 @@ dotnet ef database update --project ConflictMap.Infrastructure --startup-project
 
 Det skapar `conflictmap.db` i `ConflictMap.Api`.
 
-### 4. Starta Ollama (för AI-chatten)
+### 3. Starta Ollama (för AI-chatten)
 
 Se till att Ollama körs på `http://localhost:11434`. Oftast startar den automatiskt efter installation, annars:
 
@@ -80,15 +74,15 @@ Se till att Ollama körs på `http://localhost:11434`. Oftast startar den automa
 ollama serve
 ```
 
-### 5. Starta API:t
+### 4. Starta API:t
 
 ```bash
 dotnet run --project ConflictMap.Api
 ```
 
-API:t körs på **http://localhost:5240**. Första gången hämtar appen all data från UCDP och sparar den i databasen. Det tar en stund, följ förloppet i loggen ("UCDP import finished: … conflicts imported"). Vid senare starter hoppas importen över.
+API:t körs på **http://localhost:5240**. Första gången läser appen in datan från CSV-filerna och sparar den i databasen. Följ förloppet i loggen ("UCDP import finished: … conflicts imported"). Vid senare starter hoppas importen över.
 
-### 6. Starta webbappen
+### 5. Starta webbappen
 
 Öppna en ny terminal:
 
@@ -98,7 +92,17 @@ dotnet run --project ConflictMap.Web
 
 Gå till **http://localhost:5173** i webbläsaren.
 
-> **Utan backend:** Om `Api:BaseUrl` inte är satt (se [Konfiguration](#konfiguration)) använder webbappen `MockConflictApiClient` med påhittad data. Då kan frontend köras helt fristående, utan API, databas, token eller Ollama.
+> **Utan backend:** Om `Api:BaseUrl` inte är satt (se [Konfiguration](#konfiguration)) använder webbappen `MockConflictApiClient` med påhittad data. Då kan frontend köras helt fristående, utan API, databas eller Ollama.
+
+### Valfritt: hämta från UCDP:s API
+
+Vill ni hämta den senaste datan direkt från UCDP i stället för från CSV-filerna behövs en UCDP-token, som beställs från UCDP: https://ucdp.uu.se/apidocs/. Token sparas med User Secrets och hamnar aldrig i Git:
+
+```bash
+dotnet user-secrets set "Ucdp:ApiToken" "DIN-TOKEN" --project ConflictMap.Api
+```
+
+Byt sedan datakälla i `ConflictMap.Api/Program.cs` till `UcdpApiSource`. Om databasen redan har data hoppas importen över, så ta bort `conflictmap.db` och kör steg 2 igen innan ni startar.
 
 ## Köra testerna
 
@@ -123,7 +127,7 @@ Testerna använder en SQLite-databas i minnet och behöver varken UCDP-token, in
 | Nyckel | Standard | Beskrivning |
 |---|---|---|
 | `ConnectionStrings:Default` | `Data Source=conflictmap.db` | SQLite-databasen |
-| `Ucdp:ApiToken` | *(tom)* | UCDP-token. Sätts med User Secrets, aldrig i `appsettings.json` |
+| `Ucdp:ApiToken` | *(tom)* | UCDP-token, behövs bara med `UcdpApiSource`. Sätts med User Secrets, aldrig i `appsettings.json` |
 | `Ai:Endpoint` | `http://localhost:11434` | Adress till Ollama |
 | `Ai:Model` | `qwen2.5` | Vilken Ollama-modell chatten använder |
 
@@ -148,8 +152,8 @@ Fullständigt kontrakt finns i [`API-CONTRACT.md`](API-CONTRACT.md).
 
 | Mönster | Var | Beskrivning |
 |---|---|---|
-| **Observer** | `ConflictMap.Web/State/MapState.cs` | `MapState` är subjektet och har eventet `Changed`. `WorldMap`, `ConflictList`, `FilterBar` och `ChatPanel` prenumererar på det och avregistrerar sig i `Dispose`. Komponenterna anropar aldrig varandra, de ändrar bara tillståndet. En `[Flags]`-enum (`StateChange`) talar om vad som ändrades, så att varje komponent bara laddar om det den behöver. |
-| **Strategy** | `ConflictMap.Infrastructure/DataSources/IConflictDataSource.cs` | Importen (`ConflictImportService`) beror bara på interfacet `IConflictDataSource`, inte på hur datan hämtas. `UcdpApiSource` hämtar från UCDP:s API. Vilken källa som används bestäms i `Program.cs`. |
+| **Observer** | `ConflictMap.Web/State/MapState.cs` | `MapState` är subjektet och har eventet `Changed`. `WorldMap`, `ConflictList` och `FilterBar` prenumererar på det och avregistrerar sig i `Dispose`. `ChatPanel` och detaljsidan ändrar bara tillståndet. Komponenterna anropar aldrig varandra. En `[Flags]`-enum (`StateChange`) talar om vad som ändrades, så att varje komponent bara laddar om det den behöver. |
+| **Strategy** | `ConflictMap.Infrastructure/DataSources/IConflictDataSource.cs` | Importen (`ConflictImportService`) beror bara på interfacet `IConflictDataSource`, inte på hur datan hämtas. `CsvFileSource` läser datan från CSV-filer i projektet och `UcdpApiSource` hämtar den från UCDP:s API. Vilken källa som används bestäms i `Program.cs`. |
 
 ## Avancerade C#-koncept
 
@@ -162,8 +166,8 @@ Fullständigt kontrakt finns i [`API-CONTRACT.md`](API-CONTRACT.md).
 
 | Problem | Lösning |
 |---|---|
-| `SQLite Error 1: 'no such table'` | Databasen är inte skapad. Kör steg 3. |
-| "UCDP import failed" i loggen | Kontrollera att UCDP-token är satt (steg 2). Ta bort `conflictmap.db`, kör steg 3 igen och starta om. |
+| `SQLite Error 1: 'no such table'` | Databasen är inte skapad. Kör steg 2. |
+| "UCDP import failed" i loggen | Kontrollera att CSV-filerna finns kvar i projektet. Används `UcdpApiSource`, kontrollera att token är satt. Ta bort `conflictmap.db`, kör steg 2 igen och starta om. |
 | Chatten svarar "AI-tjänsten svarar inte" | Kontrollera att Ollama körs och att `qwen2.5` är hämtad (`ollama list`). |
 | Chatten är långsam | En lokal modell kan ta en stund, särskilt första frågan. Gränsen är 90 sekunder. |
 | Kartan är tom | Kontrollera att API:t körs på port 5240 och att importen är klar. |
