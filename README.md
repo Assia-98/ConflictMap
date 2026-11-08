@@ -20,7 +20,7 @@ Lösningen (`ConflictMap.slnx`) består av fem projekt:
 | Projekt | Beskrivning |
 |---|---|
 | `ConflictMap.Contracts` | Delade DTO:er, enums och `IConflictApiClient`. Både API och Web refererar hit. Se `API-CONTRACT.md`. |
-| `ConflictMap.Infrastructure` | EF Core med SQLite, import från UCDP:s API och `ConflictService` som läser databasen. |
+| `ConflictMap.Infrastructure` | EF Core med SQLite, import av UCDP-data (från CSV-filer eller UCDP:s API) och `ConflictService` som läser databasen. |
 | `ConflictMap.Api` | ASP.NET Core Minimal API med endpoints för konflikter, landstatistik och AI-chatt (Ollama via Microsoft.Extensions.AI). |
 | `ConflictMap.Web` | Blazor Server-frontend med karta (Leaflet via JS-interop), filter, konfliktlista, detaljsida och chatt. |
 | `ConflictMap.Tests` | xUnit-tester: unit-tester för tjänster och mappning, och API-tester med `WebApplicationFactory`. |
@@ -28,7 +28,7 @@ Lösningen (`ConflictMap.slnx`) består av fem projekt:
 ```
 ConflictMap.Web  ──HTTP──▶  ConflictMap.Api  ──▶  ConflictMap.Infrastructure  ──▶  SQLite (conflictmap.db)
        │                          │                         │
-       └──────────┬───────────────┘                         └──▶  UCDP API (import vid första start)
+       └──────────┬───────────────┘                         └──▶  CSV-filer / UCDP API (import vid första start)
                   ▼                                   Ollama (lokal AI-modell) ◀── /api/chat
        ConflictMap.Contracts
 ```
@@ -40,7 +40,6 @@ ConflictMap.Web  ──HTTP──▶  ConflictMap.Api  ──▶  ConflictMap.In
   ```bash
   dotnet tool install --global dotnet-ef
   ```
-- En **UCDP API-token**. Den behövs bara första gången, när datan importeras. Token beställs från UCDP: https://ucdp.uu.se/apidocs/
 - [Ollama](https://ollama.com/) med modellen `qwen2.5`. Behövs bara för AI-chatten, resten av appen fungerar utan.
   ```bash
   ollama pull qwen2.5
